@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Eye Break</title>
+<style>
+
+/* ============================================================
+   COLOUR CONFIG — tweak anything here
+   ============================================================ */
+:root {
+  --c-hour-tens:  #F03A8A;   /* H tens  — hot pink        */
+  --c-hour-units: #C844CC;   /* H units — magenta         */
+  --c-colon:      #8855BB;   /* colon   — muted violet    */
+  --c-min-tens:   #6655E8;   /* M tens  — deep purple     */
+  --c-min-units:  #4477F5;   /* M units — periwinkle blue */
+
+  --c-bg:         #000000;
+  --c-panel-div:  rgba(255,255,255,0.08);
+  --c-text-dim:   rgba(255,255,255,0.35);
+  --c-text-mid:   rgba(255,255,255,0.55);
+  --c-text-hi:    rgba(255,255,255,0.85);
+  --c-border:     rgba(255,255,255,0.07);
+
+  --c-event-1:    #F03A8A;
+  --c-event-2:    #6655E8;
+  --c-event-3:    #4477F5;
+  --c-event-4:    #C844CC;
+  --c-event-5:    #22BBAA;
+}
+/* ============================================================ */
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  width: 100%; height: 100%;
+  background: var(--c-bg);
+  overflow: hidden;
+  font-family: -apple-system, 'Helvetica Neue', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+/* subtle ambient glow — purely cosmetic */
+body::before {
+  content: '';
+  position: fixed; inset: 0;
+  background:
+    radial-gradient(ellipse 55% 40% at 28% 50%, rgba(200,68,204,0.07) 0%, transparent 100%),
+    radial-gradient(ellipse 55% 40% at 72% 50%, rgba(68,119,245,0.06) 0%, transparent 100%);
+  pointer-events: none;
+}
+
+/* ── Main card ───────────────────────────────────────────── */
+.card {
+  width: min(880px, 92vw);
+  background: rgba(255,255,255,0.03);
+  border: 0.5px solid var(--c-border);
+  border-radius: 28px;
+  padding: 40px 44px 32px;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* ── Two-panel row ───────────────────────────────────────── */
+.panels {
+  display: flex;
+  gap: 0;
+  align-items: stretch;
+}
+
+/* ── Clock panel ─────────────────────────────────────────── */
+.clock-panel {
+  flex: 1.1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  padding-right: 36px;
+}
+
+.clock-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  line-height: 1;
+}
+
+.digit {
+  font-size: clamp(80px, 10vw, 128px);
+  font-weight: 800;
+  letter-spacing: -3px;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s ease;
+}
+
+.d-h0 { color: var(--c-hour-tens);  }
+.d-h1 { color: var(--c-hour-units); }
+.d-sep { color: var(--c-colon); font-size: clamp(60px, 7.5vw, 96px); font-weight: 300; letter-spacing: 0; margin: 0 6px; animation: blink 1s step-end infinite; opacity: 0.85; }
+.d-m0 { color: var(--c-min-tens);   }
+.d-m1 { color: var(--c-min-units);  }
+
+@keyframes blink { 0%,49%{opacity:0.85} 50%,100%{opacity:0.2} }
+
+.clock-date {
+  font-size: 13px;
+  color: var(--c-text-dim);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+}
+
+/* ── Countdown ring ──────────────────────────────────────── */
+.ring-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 7px;
+}
+
+.ring-outer {
+  position: relative;
+  width: 72px; height: 72px;
+}
+
+.ring-svg {
+  width: 72px; height: 72px;
+  transform: rotate(-90deg);
+}
+
+.ring-track { fill:none; stroke: rgba(255,255,255,0.07); stroke-width: 4.5; }
+.ring-arc   { fill:none; stroke-width: 4.5; stroke-linecap: round;
+               stroke: var(--c-min-tens);
+               stroke-dasharray: 183.78;
+               stroke-dashoffset: 0;
+               transition: stroke-dashoffset 1s linear; }
+
+.ring-label-inner {
+  position: absolute; inset: 0;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 0;
+}
+.ring-num  { font-size: 22px; font-weight: 700; color: #fff; line-height: 1; }
+.ring-unit { font-size: 9px;  color: var(--c-text-dim); letter-spacing: 1.5px; text-transform: uppercase; }
+.ring-caption { font-size: 10px; color: var(--c-text-dim); letter-spacing: 1.8px; text-transform: uppercase; }
+
+/* ── Divider ─────────────────────────────────────────────── */
+.panel-divider {
+  width: 0.5px;
+  background: var(--c-panel-div);
+  flex-shrink: 0;
+  align-self: stretch;
+  margin: 4px 0;
+}
+
+/* ── Calendar panel ──────────────────────────────────────── */
+.cal-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  padding-left: 36px;
+  gap: 16px;
+  justify-content: center;
+}
+
+.cal-month {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--c-text-dim);
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 1px 0;
+  max-width: 224px;
+}
+
+.cal-hdr {
+  font-size: 9px;
+  color: rgba(255,255,255,0.2);
+  text-align: center;
+  padding-bottom: 5px;
+  letter-spacing: 0.5px;
+}
+
+.cal-day {
+  font-size: 11px;
+  color: var(--c-text-dim);
+  text-align: center;
+  width: 30px; height: 30px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%;
+}
+.cal-day.faded   { color: rgba(255,255,255,0.12); }
+.cal-day.today   {
+  background: var(--c-hour-units);
+  color: #fff;
+  font-weight: 700;
+}
+
+/* ── Events ──────────────────────────────────────────────── */
+.events-head {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.22);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+}
+
+.events-list { display: flex; flex-direction: column; gap: 9px; }
+
+.event-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+}
+
+.event-pip {
+  width: 5px; height: 5px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+.event-info { display: flex; flex-direction: column; gap: 1px; }
+.event-time { font-size: 10px; color: var(--c-text-dim); }
+.event-name { font-size: 13px; color: var(--c-text-hi); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 190px; }
+
+/* ── Bottom bar ──────────────────────────────────────────── */
+.bottom-bar {
+  border-top: 0.5px solid var(--c-border);
+  padding-top: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.eye-tip { font-size: 13px; color: var(--c-text-dim); }
+.eye-tip strong { color: var(--c-hour-units); font-weight: 600; }
+
+.next-lbl { font-size: 11px; color: rgba(255,255,255,0.2); letter-spacing: 0.3px; }
+
+</style>
+</head>
+<body>
+
+<div class="card">
+
+  <!-- Panels -->
+  <div class="panels">
+
+    <!-- Clock -->
+    <div class="clock-panel">
+      <div class="clock-row">
+        <span class="digit d-h0" id="dH0">0</span>
+        <span class="digit d-h1" id="dH1">9</span>
+        <span class="d-sep">:</span>
+        <span class="digit d-m0" id="dM0">4</span>
+        <span class="digit d-m1" id="dM1">1</span>
+      </div>
+      <div class="clock-date" id="clockDate">Monday, 30 March</div>
+
+      <div class="ring-wrap">
+        <div class="ring-outer">
+          <svg class="ring-svg" viewBox="0 0 72 72" xmlns="http://www.w3.org/2000/svg">
+            <circle class="ring-track" cx="36" cy="36" r="29.25"/>
+            <circle class="ring-arc"   cx="36" cy="36" r="29.25" id="ringArc"/>
+          </svg>
+          <div class="ring-label-inner">
+            <span class="ring-num"  id="ringNum">20</span>
+            <span class="ring-unit">sec</span>
+          </div>
+        </div>
+        <span class="ring-caption">look away</span>
+      </div>
+    </div>
+
+    <div class="panel-divider"></div>
+
+    <!-- Calendar -->
+    <div class="cal-panel">
+      <div class="cal-month" id="calMonth">March 2026</div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="events-head">Today's events</div>
+      <div class="events-list" id="eventsList"></div>
+    </div>
+
+  </div>
+
+  <!-- Bottom -->
+  <div class="bottom-bar">
+    <div class="eye-tip">
+      <strong>Look 20 feet away</strong> — give your eyes a real rest
+    </div>
+    <div class="next-lbl" id="nextLbl">Next break in 20:00</div>
+  </div>
+
+</div>
+
+<script>
+// ── helpers ────────────────────────────────────────────────
+const CIRC = 2 * Math.PI * 29.25;  // r=29.25
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+
+// ── clock ──────────────────────────────────────────────────
+function tickClock() {
+  const now = new Date();
+  const h = pad(now.getHours()), m = pad(now.getMinutes());
+  $('dH0').textContent = h[0];
+  $('dH1').textContent = h[1];
+  $('dM0').textContent = m[0];
+  $('dM1').textContent = m[1];
+  const days   = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('clockDate').textContent = `${days[now.getDay()]}, ${now.getDate()} ${months[now.getMonth()]}`;
+}
+
+// ── calendar ───────────────────────────────────────────────
+function buildCalendar() {
+  const now   = new Date();
+  const year  = now.getFullYear();
+  const month = now.getMonth();
+  const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  $('calMonth').textContent = `${monthNames[month]} ${year}`;
+  const grid  = $('calGrid');
+  grid.innerHTML = '';
+  ['S','M','T','W','T','F','S'].forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'cal-hdr'; el.textContent = d; grid.appendChild(el);
+  });
+  const firstDay    = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+  const prevDays    = new Date(year, month, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day faded';
+    el.textContent = prevDays - firstDay + i + 1;
+    grid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    el.className = 'cal-day' + (d === now.getDate() ? ' today' : '');
+    el.textContent = d; grid.appendChild(el);
+  }
+}
+
+// ── events ─────────────────────────────────────────────────
+// Events are injected by the shell script via window.EVENTS_DATA
+// Fallback to sample events when run standalone
+const EVENT_COLORS = ['var(--c-event-1)','var(--c-event-2)','var(--c-event-3)','var(--c-event-4)','var(--c-event-5)'];
+
+function buildEvents() {
+  const raw = (typeof window.EVENTS_DATA !== 'undefined' && window.EVENTS_DATA.length)
+    ? window.EVENTS_DATA
+    : [
+        { time: '10:00 AM', name: 'Standup' },
+        { time: '12:30 PM', name: 'Lunch' },
+        { time: '03:00 PM', name: 'Code Review' },
+        { time: '05:00 PM', name: '1:1 with team' },
+      ];
+  const list = $('eventsList');
+  list.innerHTML = '';
+  raw.slice(0, 5).forEach((ev, i) => {
+    list.innerHTML += `
+      <div class="event-row">
+        <div class="event-pip" style="background:${EVENT_COLORS[i % EVENT_COLORS.length]}"></div>
+        <div class="event-info">
+          <span class="event-time">${ev.time}</span>
+          <span class="event-name">${ev.name}</span>
+        </div>
+      </div>`;
+  });
+}
+
+// ── countdown ring ─────────────────────────────────────────
+let countdownSecs = 20;
+const BREAK_SECS  = 20;
+
+function setRing(val) {
+  const offset = CIRC * (1 - val / BREAK_SECS);
+  $('ringArc').style.strokeDasharray  = CIRC;
+  $('ringArc').style.strokeDashoffset = offset;
+  $('ringNum').textContent = val;
+}
+
+function startCountdown() {
+  countdownSecs = BREAK_SECS;
+  setRing(countdownSecs);
+  const t = setInterval(() => {
+    countdownSecs--;
+    setRing(Math.max(0, countdownSecs));
+    if (countdownSecs <= 0) { clearInterval(t); window.close(); }
+  }, 1000);
+}
+
+// ── next-break timer (passed via URL param or default 20min) ─
+function getIntervalMins() {
+  const p = new URLSearchParams(window.location.search).get('interval');
+  return p ? parseInt(p) : 20;
+}
+
+let nextSecs = getIntervalMins() * 60;
+
+function tickNext() {
+  nextSecs--;
+  if (nextSecs < 0) nextSecs = 0;
+  const m = Math.floor(nextSecs / 60);
+  const s = nextSecs % 60;
+  $('nextLbl').textContent = `Next break in ${pad(m)}:${pad(s)}`;
+}
+
+// ── init ───────────────────────────────────────────────────
+tickClock();
+buildCalendar();
+buildEvents();
+setRing(BREAK_SECS);
+startCountdown();
+setInterval(tickClock, 1000);
+setInterval(tickNext, 1000);
+</script>
+</body>
+</html>
